@@ -12,6 +12,7 @@ class TwitterBot {
             access_token_secret: props.access_token_secret
         });
         this.triggerWord = props.triggerWord;
+        this.welcomeRule = '1667353190264889350';
     };
 
     getAdminUserInfo = () => {
@@ -179,11 +180,37 @@ class TwitterBot {
         })
     };
 
+    respondDirectMessage = (response, sender) => {
+        return new Promise((resolve, reject) => {
+            this.T.post('direct_messages/events/new', {
+                event: {
+                    type: "message_create",
+                    message_create: {
+                    target: { recipient_id: sender },
+                    message_data: { text: response },
+                    },
+                },
+            }, (error, data) => {
+                if (!error) {
+                    const msg = `ERROR => message response : ${response}`;
+                    console.log(msg);
+                    resolve({
+                        message: msg,
+                        data
+                    })
+                } else {
+                    reject(error);
+                }
+            })
+        })
+    };
+
     tweetMessage = (message) => {
         return new Promise(async (resolve, reject) => {
             try {
                 const text = message.message_create.message_data.text;
                 const attachment = message.message_create.message_data.attachment;
+                const sender = message.message_create.sender_id;
                 const payload = {
                     status: text
                 }
@@ -212,7 +239,7 @@ class TwitterBot {
                 }
 
                 console.log('POSTING TWEET STATUS FROM DM...........');
-                this.T.post('statuses/update', payload, (error, data) => {
+                this.T.post('statuses/update', payload, async (error, data) => {
                     if (!error) {
                         console.log(`Successfully posted message with DM ID : ${message.id}`);
                         resolve({
@@ -221,6 +248,8 @@ class TwitterBot {
                         });
                     } else if (error.code == 324) {
                         delete payload.media_ids;
+                        const response = 'Maaf, media gagal di proses sehingga hanya teks yang dikirim berhasil di posting';
+                        await this.respondDirectMessage(response, sender);
                         this.T.post('statuses/update', payload, (error, data) => {
                             if (!error) {
                                 console.log(`Successfully posted message with DM ID : ${message.id}`);
@@ -233,6 +262,8 @@ class TwitterBot {
                             }
                         })
                     } else {
+                        const response = 'Maaf, pesan anda gagal di posting';
+                        await this.respondDirectMessage(response, sender);
                         reject(error);
                     }
                 })
@@ -242,6 +273,62 @@ class TwitterBot {
         });
     };
 
+    deleteWelcomeRule = (welcomeRule) => {
+        return new Promise((resolve, reject) => {
+            const welcomeMessageRule = welcomeRule;
+            this.T.delete('direct_messages/welcome_messages/rules/destroy', { id: welcomeMessageRule }, (error, data) => {
+                if (!error) {
+                    const msg = '\nOld message rule deleted';
+                    console.log(msg);
+                    resolve({
+                        message: msg,
+                        data
+                    })
+                } else {
+                    reject(error);
+                }
+            })
+        })
+    };
+
+    initializeWelcomeMessage = () => {
+        return new Promise(async (resolve, reject) => {
+            try {
+                this.T.post('direct_messages/welcome_messages/new', {
+                    name: "simple_welcome-message 01", 
+                    welcome_message: {
+                        message_data: {
+                            text: "Welcome to the autobase twitter bot DM! Bot commands :\npost! : post a message sent \nhello! : get a response from the bot"
+                        }
+                    },
+                }, async (error, data) => {
+                    if (!error) {
+                        console.log(data);
+                        await this.deleteWelcomeRule(this.welcomeRule);
+                        this.T.post('direct_messages/welcome_messages/rules/new', {
+                            welcome_message_rule: { welcome_message_id: data.welcome_message.id }
+                        }, (error, data) => {
+                            if (!error) {
+                                const msg = '\nNew welcome message set!';
+                                console.log(msg);
+                                //this.welcomeRule = data.welcome_message_rule.id;
+                                resolve({
+                                    message: msg,
+                                    data
+                                })
+                            } else {
+                                reject(error);
+                            }
+                        })
+                    } else {
+                        reject(error);
+                    }
+                })
+            } catch (error) {
+                reject(error);
+            }
+        })
+    };
 }
 
 module.exports = { TwitterBot };

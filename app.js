@@ -67,4 +67,17 @@ app.get('/triggerjob', async (req, res, next) => {
     res.send('Job triggered');
 });
 
+app.get('/setwelcome', async (req, res, next) => {
+    // try {
+    //     const finished = await bot.initializeWelcomeMessage();
+    //     console.log(finished.data);
+    // } catch (error) {
+    //     console.log(error);
+    //     console.log('\n------------- ERROR ---------------');
+    // } finally {
+    //     res.send('Welcome message set');
+    // }
+    res.send('Welcome message set');
+});
+
 app.listen(PORT, () => console.log(`Server is listening to port ${PORT}`));
