@@ -11,7 +11,8 @@ class TwitterBot {
             access_token: props.access_token,
             access_token_secret: props.access_token_secret
         });
-        this.triggerWord = props.triggerWord;
+        this.triggerWord1 = props.triggerWord1;
+        this.triggerWord2 = props.triggerWord2;
         this.welcomeRule = '1667353190264889350';
     };
 
@@ -33,19 +34,23 @@ class TwitterBot {
         //return messages.filter(msg => msg.message_create.sender_id !== userId);
     };
 
-    getUnnecessaryMessages = (receivedMessages, trigger) => {
+    getUnnecessaryMessages = (receivedMessages, trigger1, trigger2) => {
         return receivedMessages.filter(msg => {
             const messages = msg.message_create.message_data.text;
             const words = this.getEachWord(messages);
-            return !words.includes(trigger);
+            const isWord1 = !words.includes(trigger1);
+            const isWord2 = !words.includes(trigger2);
+            return (isWord1 && isWord2);
         })
     };
 
-    getTriggerMessages = (receivedMessages, trigger) => {
+    getTriggerMessages = (receivedMessages, trigger1, trigger2) => {
         return receivedMessages.filter(msg => {
             const message = msg.message_create.message_data.text; 
             const words = this.getEachWord(message); 
-            return words.includes(trigger);
+            const isWord1 = words.includes(trigger1);
+            const isWord2 = words.includes(trigger2);
+            return (isWord1 || isWord2);
         })
     };
 
@@ -131,8 +136,8 @@ class TwitterBot {
                         let lastMessage = {};
                         const messages = data.events;
                         const receivedMessages = this.getReceivedMessages(messages, userId);
-                        const unnecessaryMessages = this.getUnnecessaryMessages(receivedMessages, this.triggerWord);
-                        const triggerMessages = this.getTriggerMessages(receivedMessages, this.triggerWord);
+                        const unnecessaryMessages = this.getUnnecessaryMessages(receivedMessages, this.triggerWord1, this.triggerWord2);
+                        const triggerMessages = this.getTriggerMessages(receivedMessages, this.triggerWord1, this.triggerWord2);
                         
                         await this.deleteUnnecessaryMessages(unnecessaryMessages);
                         await this.deleteMoreThanCharMessages(triggerMessages);
@@ -192,7 +197,7 @@ class TwitterBot {
                 },
             }, (error, data) => {
                 if (!error) {
-                    const msg = `ERROR => message response : ${response}`;
+                    const msg = `Message response : ${response}`;
                     console.log(msg);
                     resolve({
                         message: msg,
